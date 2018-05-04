@@ -1,11 +1,15 @@
 package main
 
+import (
+	"log"
+	"net/http"
+)
+
 func main() {
 	db := GetDB()
 	defer db.Close()
-
 	SetupDB(db)
-	AddLocation(db, Location{"closet", ""})
-	AddLocation(db, Location{"shelf", "closet"})
-	AddItem(db, Item{"bag", "shelf"})
+
+	router := GetRouter()
+	log.Fatal(http.ListenAndServe(":3742", router))
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="https://unpkg.com/buefy/lib/buefy.min.css">
+	<script src="https://unpkg.com/vue/dist/vue.js"></script>
+	<script src="https://unpkg.com/buefy"></script>
+	<title>Inventory</title>
+</head>
+
+<body>
+	<div id="app">
+		<nav class="navbar" role="navigation" aria-label="main navigation">
+			<div class="navbar-brand">
+				<div class="navbar-item">Inventory Management</div>
+			</div>
+		</nav>
+
+		<section>
+			<b-tabs position="is-centered" class="block">
+				<b-tab-item label="Locations">
+					<level>
+						<b-table :data="locations" :columns="l_columns"
+							:striped='true' :hoverable='true'></b-table>
+					</level>
+				</b-tab-item>
+				<b-tab-item label="Items">
+										<b-table :data="items" :columns="i_columns"
+							:striped='true' :hoverable='true'></b-table>
+
+				</b-tab-item>
+			</b-tabs>
+		</section>
+	</div>
+
+	<!-- JS code begins here -->
+	<script>
+		Vue.use(Buefy.default)
+		
+		var app = new Vue({
+			el: "#app",
+			data: {
+				locations: [{name: 'drawer', parent: 'cabinet'}, {name: 'cabinet', parent: ''}],
+				items: [{name: 'item 1', location: 'drawer'}, {name: 'item 2', location: 'drawer'}],
+				l_columns: [{field: 'name', label: 'Name'}, {field: 'parent', label: 'Parent'}],
+				i_columns: [{field: 'name', label: 'Name'}, {field: 'location', label: 'Location'}]
+			}
+		})
+	</script>
+</body>
+</html>

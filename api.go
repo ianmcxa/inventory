@@ -15,5 +15,7 @@ func GetRouter() *mux.Router {
 }
 
 func addLocation(w http.ResponseWriter, r *http.Request) {
-
+	var location Location
+	// protect against giant blobs being sent
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 }
