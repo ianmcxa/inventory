@@ -10,6 +10,6 @@ func main() {
 	defer db.Close()
 	SetupDB(db)
 
-	router := GetRouter()
+	router := GetRouter(db)
 	log.Fatal(http.ListenAndServe(":3742", router))
 }

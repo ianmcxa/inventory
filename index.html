@@ -4,18 +4,22 @@
 	<link rel="stylesheet" href="https://unpkg.com/buefy/lib/buefy.min.css">
 	<script src="https://unpkg.com/vue/dist/vue.js"></script>
 	<script src="https://unpkg.com/buefy"></script>
+	<script src="https://unpkg.com/vue-resource/dist/vue-resource.min.js"></script>
 	<script defer src="https://use.fontawesome.com/releases/v5.0.12/js/all.js" 
 		integrity="sha384-Voup2lBiiyZYkRto2XWqbzxHXwzcm4A5RfdfG6466bu5LqjwwrjXCMBQBLMWh7qR" 
 		crossorigin="anonymous"></script>
 	<title>Inventory</title>
 	<style>
-		
+	.search {
+		margin-top: 2rem;
+		margin-bottom: 2rem;
+	}
 	</style>
 </head>
 
 <body>
 	<div id="app">
-		<nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+		<nav class="navbar is-light" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
 				<div class="navbar-item">Inventory Management</div>
 			</div>
@@ -24,25 +28,80 @@
 				<a v-on:click="page = 'items'" class="navbar-item">Items</a>
 			</div>
 		</nav>
+		
 		<div class="container">
-			<section>
-				<b-table v-if="page == 'locations'" :data="locations" :columns="l_columns"
-					:striped='true' :hoverable='true'>
-					
-					<template slot-scope="props">
-						
-					</template>
+			<!-- Locations code -->
+			<template v-if="page == 'locations'">
+				<div class="control has-icons-left search">
+					<input v-model="locationSearch" class="input rounded" placeholder="Search">
+					<span class="icon is-small is-left">
+					<i class="fas fa-search"></i>
+					</span>
+				</div>
+			
+				<b-table  :data="filteredLocations" :columns="l_columns"
+					:striped='true' :hoverable='true' :selected.sync="selectedLocation">
 				</b-table>
 				
-				<b-table v-if="page == 'items'" :data="items" :columns="i_columns"
-					:striped='true' :hoverable='true'></b-table>
-				<a style="margin-top:1rem" class="button is-dark">
-					<span class="icon">
-					<i class="fas fa-plus"></i>
+				<div class="field is-grouped" style="margin-top:1rem">
+					<p class="control">
+						<a class="button is-primary">
+							<span class="icon">
+							<i class="fas fa-plus"></i>
+							</span>
+							<span>Add</span>
+						</a>
+					</p>
+					<p class="control" v-if="selectedLocation">
+						<a class="button is-danger">
+							<span class="icon">
+							<i class="fas fa-trash-alt"></i>
+							</span>
+							<span>Delete</span>
+						</a>
+					</p>
+				</div>
+			</template>
+			
+			<!-- Items code -->
+			<template v-if="page == 'items'">
+				<div class="control has-icons-left search">
+					<input v-model="itemSearch" class="input rounded" placeholder="Search">
+					<span class="icon is-small is-left">
+					<i class="fas fa-search"></i>
 					</span>
-					<span>Add</span>
-				</a>
-			</section>
+				</div>
+			
+				<b-table v-if="page == 'items'" :data="filteredItems" :columns="i_columns"
+					:striped='true' :hoverable='true' :selected.sync="selectedItem"></b-table>
+				
+				<div class="field is-grouped" style="margin-top:1rem">
+					<p class="control">
+						<a class="button is-primary">
+							<span class="icon">
+							<i class="fas fa-plus"></i>
+							</span>
+							<span>Add</span>
+						</a>
+					</p>
+					<p class="control" v-if="selectedItem">
+						<a class="button is-success">
+							<span class="icon">
+							<i class="fas fa-angle-right"></i>
+							</span>
+							<span>Move</span>
+						</a>
+					</p>
+					<p class="contral" v-if="selectedItem">
+						<a class="button is-danger">
+							<span class="icon">
+							<i class="fas fa-trash-alt"></i>
+							</span>
+							<span>Delete</span>
+						</a>
+					</p>
+				</div>
+			</template>
 		</div>
 	</div>
 
@@ -52,10 +111,47 @@
 		
 		var app = new Vue({
 			el: "#app",
+			mounted: function() {
+				this.$http.get('/items').then(response => {
+					this.items = response.body
+				}, response => {
+					console.log(response.body)
+				})
+				this.$http.get('/locations').then(response => {
+					this.locations = response.body
+				}, response => {
+					console.log(response.body)
+				})
+			},
+			computed: {
+				locationNames: function() {
+					return this.locations.map(function(l) { return l.name })
+				},
+				itemNames: function() {
+					return this.items.map(function(i) { return i.name })
+				},
+				filteredLocations: function() {
+					var search = this.locationSearch
+					if (search == '') return this.locations
+					return this.locations.filter(function(l) { return l.name.includes(search) })
+				},
+				filteredItems: function() {
+					var search = this.itemSearch
+					if (search == '') return this.items
+					return this.items.filter(function(i) { return i.name.includes(search) })
+				},
+			},
 			data: {
 				page: 'locations',
-				locations: [{name: 'drawer', parent: 'cabinet'}, {name: 'cabinet', parent: ''}],
-				items: [{name: 'item 1', location: 'drawer'}, {name: 'item 2', location: 'drawer'}],
+				locations: [],
+				items: [],
+				selectedItem: null,
+				selectedLocation: null,
+				itemSearch: '',
+				locationSearch: '',
+				addLocation: false,
+				addItem: false,
+				moveItem: false,
 				l_columns: [{field: 'name', label: 'Name'}, {field: 'parent', label: 'Parent'}],
 				i_columns: [{field: 'name', label: 'Name'}, {field: 'location', label: 'Location'}]
 			}

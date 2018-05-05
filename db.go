@@ -9,13 +9,13 @@ import (
 )
 
 type Location struct {
-	Name   string
-	Parent string
+	Name   string `json:"name"`
+	Parent string `json:"parent"`
 }
 
 type Item struct {
-	Name     string
-	Location string
+	Name     string `json:"name"`
+	Location string `json:"location"`
 }
 
 func GetDB() *sql.DB {
@@ -87,7 +87,7 @@ func RemoveLocation(db *sql.DB, name string) {
 }
 
 func GetLocations(db *sql.DB) []Location {
-	locations := make([]Location, 3)
+	locations := make([]Location, 0)
 
 	rows, err := db.Query("SELECT * FROM locations")
 	if err != nil {
@@ -170,8 +170,32 @@ func RemoveItem(db *sql.DB, name string) {
 	tx.Commit()
 }
 
+func GetItems(db *sql.DB) []Item {
+	items := make([]Item, 0)
+
+	rows, err := db.Query("SELECT * FROM items")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var i Item
+		err = rows.Scan(&i.Name, &i.Location)
+		if err != nil {
+			log.Fatal(err)
+		}
+		items = append(items, i)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return items
+}
+
 func GetItemsByLocation(db *sql.DB, location string) []Item {
-	items := make([]Item, 3)
+	items := make([]Item, 0)
 
 	rows, err := db.Query("SELECT * FROM items WHERE location = ?", location)
 	if err != nil {
