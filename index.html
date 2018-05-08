@@ -10,9 +10,13 @@
 		crossorigin="anonymous"></script>
 	<title>Inventory</title>
 	<style>
-	.search {
+	.space {
 		margin-top: 2rem;
 		margin-bottom: 2rem;
+	}
+	.container {
+		padding-left: 1rem;
+		padding-right: 1rem;
 	}
 	</style>
 </head>
@@ -32,7 +36,7 @@
 		<div class="container">
 			<!-- Locations code -->
 			<template v-if="page == 'locations'">
-				<div class="control has-icons-left search">
+				<div class="control has-icons-left space">
 					<input v-model="locationSearch" class="input rounded" placeholder="Search">
 					<span class="icon is-small is-left">
 					<i class="fas fa-search"></i>
@@ -43,62 +47,131 @@
 					:striped='true' :hoverable='true' :selected.sync="selectedLocation">
 				</b-table>
 				
+				<div v-if="showAddLocation" class="field is-horizontal space">
+					<div class="field-label is-normal">Add Location</div>
+					
+					<div class="field-body">
+					<div class="field">
+					<p class="control">
+						<input v-model="addLocationName" class="input" type="text" placeholder="Name">
+					</p>
+					</div>
+					<div class="field">
+					<p class="control">
+						<b-autocomplete
+							v-model="addLocationParent"
+							:data="locationNames"
+							placeholder="Parent Location">
+							<template slot="empty">No results found</template>
+						</b-autocomplete>
+					</p>
+					</div>
+					<div class="field is-grouped">
+					<p class="control">
+						<button v-on:click="addLocation()" class="button is-primary">Add Location</button>
+					</p>
+					<p class="control">
+						<button v-on:click="showAddLocation = false" class="button is-secondary">Cancel</button>
+					</p>
+					</div>
+					</div>
+				</div>
+				
 				<div class="field is-grouped" style="margin-top:1rem">
 					<p class="control">
-						<a class="button is-primary">
+						<button v-on:click="showAddLocation = true" class="button is-primary">
 							<span class="icon">
 							<i class="fas fa-plus"></i>
 							</span>
 							<span>Add</span>
-						</a>
+						</button>
+					</p>
+					<p class="control" v-if="selectedItem">
+						<button class="button is-success">
+							<span class="icon">
+							<i class="fas fa-angle-right"></i>
+							</span>
+							<span>Move</span>
+						</button>
 					</p>
 					<p class="control" v-if="selectedLocation">
-						<a class="button is-danger">
+						<button v-on:click="deleteLocation()" class="button is-danger">
 							<span class="icon">
 							<i class="fas fa-trash-alt"></i>
 							</span>
 							<span>Delete</span>
-						</a>
+						</button>
 					</p>
 				</div>
 			</template>
 			
 			<!-- Items code -->
 			<template v-if="page == 'items'">
-				<div class="control has-icons-left search">
+				<div class="control has-icons-left space">
 					<input v-model="itemSearch" class="input rounded" placeholder="Search">
 					<span class="icon is-small is-left">
 					<i class="fas fa-search"></i>
 					</span>
 				</div>
 			
-				<b-table v-if="page == 'items'" :data="filteredItems" :columns="i_columns"
+				<b-table :data="filteredItems" :columns="i_columns"
 					:striped='true' :hoverable='true' :selected.sync="selectedItem"></b-table>
+					
+				<div v-if="showAddItem" class="field is-horizontal space">
+					<div class="field-label is-normal">Add Item</div>
+					
+					<div class="field-body">
+					<div class="field">
+					<p class="control">
+						<input v-model="addItemName" class="input" type="text" placeholder="Name">
+					</p>
+					</div>
+					<div class="field">
+					<p class="control">
+						<b-autocomplete
+							v-model="addItemLocation"
+							:data="locationNames"
+							placeholder="Location">
+							<template slot="empty">No results found</template>
+						</b-autocomplete>
+					</p>
+					</div>
+					<div class="field is-grouped">
+					<p class="control">
+						<button v-on:click="addItem()" class="button is-primary">Add Item</button>
+					</p>
+					<p class="control">
+						<button v-on:click="showAddItem = false" class="button is-secondary">Cancel</button>
+					</p>
+					</div>
+					</div>
+				</div>
+
 				
 				<div class="field is-grouped" style="margin-top:1rem">
 					<p class="control">
-						<a class="button is-primary">
+						<button v-on:click="showAddItem = true" class="button is-primary">
 							<span class="icon">
 							<i class="fas fa-plus"></i>
 							</span>
 							<span>Add</span>
-						</a>
+						</button>
 					</p>
 					<p class="control" v-if="selectedItem">
-						<a class="button is-success">
+						<button class="button is-success">
 							<span class="icon">
 							<i class="fas fa-angle-right"></i>
 							</span>
 							<span>Move</span>
-						</a>
+						</button>
 					</p>
 					<p class="contral" v-if="selectedItem">
-						<a class="button is-danger">
+						<button v-on:click="deleteItem()" class="button is-danger">
 							<span class="icon">
 							<i class="fas fa-trash-alt"></i>
 							</span>
 							<span>Delete</span>
-						</a>
+						</button>
 					</p>
 				</div>
 			</template>
@@ -112,16 +185,8 @@
 		var app = new Vue({
 			el: "#app",
 			mounted: function() {
-				this.$http.get('/items').then(response => {
-					this.items = response.body
-				}, response => {
-					console.log(response.body)
-				})
-				this.$http.get('/locations').then(response => {
-					this.locations = response.body
-				}, response => {
-					console.log(response.body)
-				})
+				this.fetchItems()
+				this.fetchLocations()
 			},
 			computed: {
 				locationNames: function() {
@@ -149,11 +214,70 @@
 				selectedLocation: null,
 				itemSearch: '',
 				locationSearch: '',
-				addLocation: false,
-				addItem: false,
-				moveItem: false,
+				showAddLocation: false,
+				addLocationName: '',
+				addLocationParent: '',
+				showAddItem: false,
+				addItemName: '',
+				addItemLocation: '',
+				showMoveItem: false,
 				l_columns: [{field: 'name', label: 'Name'}, {field: 'parent', label: 'Parent'}],
 				i_columns: [{field: 'name', label: 'Name'}, {field: 'location', label: 'Location'}]
+			},
+			methods: {
+				addLocation: function() {
+					if (!this.addLocationName) return
+					
+					var newLocation = {'name': this.addLocationName, 'parent': this.addLocationParent}
+					this.$http.post("/locations", newLocation).then(
+						response => { 
+							this.locations.push(newLocation)
+							this.showAddLocation = false
+						}, response => { console.log(response) }
+					)
+				},
+				deleteLocation: function() {
+					if (!this.selectedLocation) return
+					this.$http.delete("/locations/" + this.selectedLocation.name).then(
+						response => { this.locations = 
+							this.locations.filter((l) => { return l.name != this.selectedLocation.name })
+						}, response => { console.log(response) }
+					)
+				},
+				addItem: function() {
+					if (!this.addItemName) return
+					
+					var newItem = {'name': this.addItemName, 'location': this.addItemLocation}
+					this.$http.post("/items", newItem).then(
+						response => { 
+							this.items.push(newItem)
+							this.showAddItem = false
+						},
+						response => { console.log(response) }
+					)
+				},
+				deleteItem: function() {
+					if (!this.selectedItem) return
+					this.$http.delete("/items/" + this.selectedItem.name).then(
+						response => { this.items = 
+							this.items.filter((i) => { return i.name != this.selectedItem.name })
+						}, response => { console.log(response) }
+					)
+				},
+				fetchItems: function() {
+					this.$http.get('/items').then(response => {
+						this.items = response.body
+					}, response => {
+						console.log(response.body)
+					})
+				},
+				fetchLocations: function() {
+					this.$http.get('/locations').then(response => {
+						this.locations = response.body
+					}, response => {
+						console.log(response.body)
+					})
+				}
 			}
 		})
 	</script>

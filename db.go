@@ -217,12 +217,3 @@ func GetItemsByLocation(db *sql.DB, location string) []Item {
 
 	return items
 }
-
-func GetItemLocation(db *sql.DB, name string) string {
-	var location string
-	err := db.QueryRow("SELECT location FROM items WHERE name = ?", name).Scan(location)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return location
-}
