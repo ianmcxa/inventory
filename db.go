@@ -66,6 +66,27 @@ func AddLocation(db *sql.DB, location Location) {
 	tx.Commit()
 }
 
+// find location by name and update it
+func UpdateLocation(db *sql.DB, name string, location Location) {
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, err := tx.Prepare("UPDATE locations SET name = ?, parent = ? WHERE name = ?")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(location.Name, location.Parent, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx.Commit()
+}
+
 func RemoveLocation(db *sql.DB, name string) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -130,19 +151,20 @@ func AddItem(db *sql.DB, item Item) {
 	tx.Commit()
 }
 
-func MoveItem(db *sql.DB, item Item) {
+// find item by the name and update its values
+func UpdateItem(db *sql.DB, name string, item Item) {
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stmt, err := tx.Prepare("UPDATE items SET location = ? WHERE name = ?")
+	stmt, err := tx.Prepare("UPDATE items SET name = ?, location = ? WHERE name = ?")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(item.Location, item.Name)
+	_, err = stmt.Exec(item.Name, item.Location, name)
 	if err != nil {
 		log.Fatal(err)
 	}

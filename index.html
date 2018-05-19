@@ -77,6 +77,31 @@
 					</div>
 				</div>
 				
+				<div v-if="showMoveLocation" class="field is-horizontal space">
+					<div class="field-label is-normal">Move Location</div>
+					
+					<div class="field-body">
+					<div class="field">
+					<p class="control">
+						<b-autocomplete
+							v-model="moveLocationParent"
+							:data="locationNames"
+							placeholder="Parent Location">
+							<template slot="empty">No results found</template>
+						</b-autocomplete>
+					</p>
+					</div>
+					<div class="field is-grouped">
+					<p class="control">
+						<button v-on:click="moveLocation()" class="button is-primary">Move Location</button>
+					</p>
+					<p class="control">
+						<button v-on:click="showMoveLocation = false" class="button is-secondary">Cancel</button>
+					</p>
+					</div>
+					</div>
+				</div>
+				
 				<div class="field is-grouped" style="margin-top:1rem">
 					<p class="control">
 						<button v-on:click="showAddLocation = true" class="button is-primary">
@@ -86,7 +111,7 @@
 							<span>Add</span>
 						</button>
 					</p>
-					<p class="control" v-if="selectedItem">
+					<p v-on:click="showMoveLocation = true" class="control" v-if="selectedLocation">
 						<button class="button is-success">
 							<span class="icon">
 							<i class="fas fa-angle-right"></i>
@@ -146,6 +171,31 @@
 					</div>
 					</div>
 				</div>
+				
+				<div v-if="showMoveItem" class="field is-horizontal space">
+					<div class="field-label is-normal">Move Item</div>
+					
+					<div class="field-body">
+					<div class="field">
+					<p class="control">
+						<b-autocomplete
+							v-model="moveItemLocation"
+							:data="locationNames"
+							placeholder="Location">
+							<template slot="empty">No results found</template>
+						</b-autocomplete>
+					</p>
+					</div>
+					<div class="field is-grouped">
+					<p class="control">
+						<button v-on:click="moveItem()" class="button is-primary">Move Item</button>
+					</p>
+					<p class="control">
+						<button v-on:click="showMoveItem = false" class="button is-secondary">Cancel</button>
+					</p>
+					</div>
+					</div>
+				</div>
 
 				
 				<div class="field is-grouped" style="margin-top:1rem">
@@ -158,7 +208,7 @@
 						</button>
 					</p>
 					<p class="control" v-if="selectedItem">
-						<button class="button is-success">
+						<button v-on:click="showMoveItem = true" class="button is-success">
 							<span class="icon">
 							<i class="fas fa-angle-right"></i>
 							</span>
@@ -203,7 +253,8 @@
 				filteredItems: function() {
 					var search = this.itemSearch
 					if (search == '') return this.items
-					return this.items.filter(function(i) { return i.name.includes(search) })
+					return this.items.filter(function(i) 
+						{ return i.name.includes(search) || i.location.includes(search) })
 				},
 			},
 			data: {
@@ -214,13 +265,20 @@
 				selectedLocation: null,
 				itemSearch: '',
 				locationSearch: '',
+				// add location fields
 				showAddLocation: false,
 				addLocationName: '',
 				addLocationParent: '',
+				// move location fields
+				showMoveLocation: false,
+				moveLocationParent: '',
+				// add item fields
 				showAddItem: false,
 				addItemName: '',
 				addItemLocation: '',
+				// move item fields
 				showMoveItem: false,
+				moveItemLocation: '',
 				l_columns: [{field: 'name', label: 'Name'}, {field: 'parent', label: 'Parent'}],
 				i_columns: [{field: 'name', label: 'Name'}, {field: 'location', label: 'Location'}]
 			},
@@ -234,6 +292,19 @@
 							this.locations.push(newLocation)
 							this.showAddLocation = false
 						}, response => { console.log(response) }
+					)
+				},
+				moveLocation: function() {
+					if (!this.moveLocationParent) return
+					
+					var location = {'name': this.selectedLocation.name, 'parent': this.moveLocationParent}
+					this.$http.put("/locations/" + this.selectedLocation.name, location).then(
+						response => { 
+							var index = this.locations.findIndex((l) => { return l.name === location.name })
+							this.locations[index] = location
+							this.showMoveLocation = false
+						},
+						response => { console.log(response) }
 					)
 				},
 				deleteLocation: function() {
@@ -252,6 +323,19 @@
 						response => { 
 							this.items.push(newItem)
 							this.showAddItem = false
+						},
+						response => { console.log(response) }
+					)
+				},
+				moveItem: function() {
+					if (!this.moveItemLocation) return
+					
+					var item = {'name': this.selectedItem.name, 'location': this.moveItemLocation}
+					this.$http.put("/items/" + this.selectedItem.name, item).then(
+						response => { 
+							var index = this.items.findIndex((i) => { return i.name === item.name })
+							this.items[index] = item
+							this.showMoveItem = false
 						},
 						response => { console.log(response) }
 					)
