@@ -60,7 +60,7 @@
 					<p class="control">
 						<b-autocomplete
 							v-model="addLocationParent"
-							:data="locationNames"
+							:data="addLocationSearch"
 							placeholder="Parent Location">
 							<template slot="empty">No results found</template>
 						</b-autocomplete>
@@ -85,7 +85,7 @@
 					<p class="control">
 						<b-autocomplete
 							v-model="moveLocationParent"
-							:data="locationNames"
+							:data="moveLocationSearch"
 							placeholder="Parent Location">
 							<template slot="empty">No results found</template>
 						</b-autocomplete>
@@ -155,7 +155,7 @@
 					<p class="control">
 						<b-autocomplete
 							v-model="addItemLocation"
-							:data="locationNames"
+							:data="addItemSearch"
 							placeholder="Location">
 							<template slot="empty">No results found</template>
 						</b-autocomplete>
@@ -180,7 +180,7 @@
 					<p class="control">
 						<b-autocomplete
 							v-model="moveItemLocation"
-							:data="locationNames"
+							:data="moveItemSearch"
 							placeholder="Location">
 							<template slot="empty">No results found</template>
 						</b-autocomplete>
@@ -240,10 +240,26 @@
 			},
 			computed: {
 				locationNames: function() {
-					return this.locations.map(function(l) { return l.name })
+					return this.locations.map((l) => { return l.name })
+				},
+				addItemSearch: function() {
+					return this.locationNames
+						.filter((l) => { return l.includes(this.addItemLocation) })
+				},
+				moveItemSearch: function() {
+					return this.locationNames
+						.filter((l) => { return l.includes(this.moveItemLocation) })
+				},
+				moveLocationSearch: function() {
+					return this.locationNames
+						.filter((l) => { return l.includes(this.moveLocationParent) })
+				},
+				addLocationSearch: function() {
+					return this.locationNames
+						.filter((l) => { return l.includes(this.addLocationParent) })
 				},
 				itemNames: function() {
-					return this.items.map(function(i) { return i.name })
+					return this.items.map((i) => { return i.name })
 				},
 				filteredLocations: function() {
 					var search = this.locationSearch
