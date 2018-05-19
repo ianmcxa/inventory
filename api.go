@@ -175,7 +175,7 @@ func mkGetItems(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 }
 
 func serveHtml(w http.ResponseWriter, r *http.Request) {
-	page, err := ioutil.ReadFile("./index.html")
+	page, err := ReadFile("index.html")
 	if err != nil {
 		log.Fatal(err)
 	}

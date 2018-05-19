@@ -2,7 +2,7 @@
 <html>
 <head>
 	<link rel="stylesheet" href="https://unpkg.com/buefy/lib/buefy.min.css">
-	<script src="https://unpkg.com/vue/dist/vue.js"></script>
+	<script src="https://unpkg.com/vue/dist/vue.min.js"></script>
 	<script src="https://unpkg.com/buefy"></script>
 	<script src="https://unpkg.com/vue-resource/dist/vue-resource.min.js"></script>
 	<script defer src="https://use.fontawesome.com/releases/v5.0.12/js/all.js" 
@@ -319,6 +319,7 @@
 							var index = this.locations.findIndex((l) => { return l.name === location.name })
 							this.locations[index] = location
 							this.showMoveLocation = false
+							this.selectedLocation = null
 						},
 						response => { console.log(response) }
 					)
@@ -352,6 +353,7 @@
 							var index = this.items.findIndex((i) => { return i.name === item.name })
 							this.items[index] = item
 							this.showMoveItem = false
+							this.selectedItem = null
 						},
 						response => { console.log(response) }
 					)
