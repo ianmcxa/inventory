@@ -1,11 +1,12 @@
 package main
 
 import (
-	"database/sql"
+	"bytes"
+	"encoding/gob"
 	"log"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	bolt "github.com/coreos/bbolt"
 )
 
 type Location struct {
@@ -18,8 +19,8 @@ type Item struct {
 	Location string `json:"location"`
 }
 
-func GetDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "./inventory.db")
+func GetDB() *bolt.DB {
+	db, err := bolt.Open("inventory.db", 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -27,215 +28,174 @@ func GetDB() *sql.DB {
 	return db
 }
 
-func SetupDB(db *sql.DB) {
-	setupStmt := `CREATE TABLE IF NOT EXISTS locations(
-	name STRING PRIMARY KEY,
-	parent STRING,
-	FOREIGN KEY(parent) REFERENCES locations(name)
-	);
-	CREATE TABLE IF NOT EXISTS items(
-	name STRING PRIMARY KEY, 
-	location STRING,
-	FOREIGN KEY(location) REFERENCES locations(name)
-	)`
-
-	_, err := db.Exec(setupStmt)
-	if err != nil {
-		log.Fatal("%q: %s\n", err, setupStmt)
-		os.Exit(1)
-	}
+func SetupDB(db *bolt.DB) {
+	db.Batch(func(tx *bolt.Tx) error {
+		tx.CreateBucketIfNotExists([]byte("locations"))
+		tx.CreateBucketIfNotExists([]byte("items"))
+		return nil
+	})
 }
 
-func AddLocation(db *sql.DB, location Location) {
-	tx, err := db.Begin()
+func AddLocation(db *bolt.DB, location Location) {
+	gob.Register(Location{})
+
+	buffer := bytes.Buffer{}
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(location)
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("locations"))
+		return b.Put([]byte(location.Name), buffer.Bytes())
+		return nil
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("INSERT INTO locations VALUES(?, ?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(location.Name, location.Parent)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
 // find location by name and update it
-func UpdateLocation(db *sql.DB, name string, location Location) {
-	tx, err := db.Begin()
+func UpdateLocation(db *bolt.DB, name string, location Location) {
+	gob.Register(Location{})
+
+	buffer := bytes.Buffer{}
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(location)
+
+	err := db.Batch(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("locations"))
+		b.Delete([]byte(name))
+		return b.Put([]byte(location.Name), buffer.Bytes())
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("UPDATE locations SET name = ?, parent = ? WHERE name = ?")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(location.Name, location.Parent, name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
-func RemoveLocation(db *sql.DB, name string) {
-	tx, err := db.Begin()
+func RemoveLocation(db *bolt.DB, name string) {
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("locations"))
+		return b.Delete([]byte(name))
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("DELETE FROM locations WHERE name = ?")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
-func GetLocations(db *sql.DB) []Location {
+func GetLocations(db *bolt.DB) []Location {
 	locations := make([]Location, 0)
+	gob.Register(Location{})
 
-	rows, err := db.Query("SELECT * FROM locations")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var l Location
-		err = rows.Scan(&l.Name, &l.Parent)
-		if err != nil {
-			log.Fatal(err)
+	db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte("locations"))
+		// we just return nil if there are no locations stored
+		if b == nil {
+			return nil
 		}
-		locations = append(locations, l)
-	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
+
+		c := b.Cursor()
+
+		for key, value := c.First(); key != nil; key, value = c.Next() {
+			//we must decode the byte array into a location object
+			decoder := gob.NewDecoder(bytes.NewReader(value))
+			var location Location
+
+			// print error on failure, otherwise add server to array
+			err := decoder.Decode(&location)
+			if err != nil {
+				log.Printf("Unable to decode location %v\n", err)
+			} else {
+				locations = append(locations, location)
+			}
+		}
+
+		return nil
+	})
 
 	return locations
 }
 
-func AddItem(db *sql.DB, item Item) {
-	tx, err := db.Begin()
+func AddItem(db *bolt.DB, item Item) {
+	gob.Register(Item{})
+
+	buffer := bytes.Buffer{}
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(item)
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("items"))
+		return b.Put([]byte(item.Name), buffer.Bytes())
+		return nil
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("INSERT INTO items VALUES(?, ?)")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(item.Name, item.Location)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
 // find item by the name and update its values
-func UpdateItem(db *sql.DB, name string, item Item) {
-	tx, err := db.Begin()
+func UpdateItem(db *bolt.DB, name string, item Item) {
+	gob.Register(Item{})
+
+	buffer := bytes.Buffer{}
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(item)
+
+	err := db.Batch(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("items"))
+		b.Delete([]byte(name))
+		return b.Put([]byte(item.Name), buffer.Bytes())
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("UPDATE items SET name = ?, location = ? WHERE name = ?")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(item.Name, item.Location, name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
-func RemoveItem(db *sql.DB, name string) {
-	tx, err := db.Begin()
+func RemoveItem(db *bolt.DB, name string) {
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("items"))
+		return b.Delete([]byte(name))
+	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	stmt, err := tx.Prepare("DELETE FROM items WHERE name = ?")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tx.Commit()
 }
 
-func GetItems(db *sql.DB) []Item {
+func GetItems(db *bolt.DB) []Item {
 	items := make([]Item, 0)
+	gob.Register(Item{})
 
-	rows, err := db.Query("SELECT * FROM items")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var i Item
-		err = rows.Scan(&i.Name, &i.Location)
-		if err != nil {
-			log.Fatal(err)
+	db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte("items"))
+		// we just return nil if there are no items stored
+		if b == nil {
+			return nil
 		}
-		items = append(items, i)
-	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	return items
-}
+		c := b.Cursor()
 
-func GetItemsByLocation(db *sql.DB, location string) []Item {
-	items := make([]Item, 0)
+		for key, value := c.First(); key != nil; key, value = c.Next() {
+			//we must decode the byte array into a item object
+			decoder := gob.NewDecoder(bytes.NewReader(value))
+			var item Item
 
-	rows, err := db.Query("SELECT * FROM items WHERE location = ?", location)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var i Item
-		err = rows.Scan(&i.Name, &i.Location)
-		if err != nil {
-			log.Fatal(err)
+			// print error on failure, otherwise add server to array
+			err := decoder.Decode(&item)
+			if err != nil {
+				log.Printf("Unable to decode item %v\n", err)
+			} else {
+				items = append(items, item)
+			}
 		}
-		items = append(items, i)
-	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
+
+		return nil
+	})
 
 	return items
 }

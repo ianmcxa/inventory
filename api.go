@@ -1,17 +1,17 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 
+	bolt "github.com/coreos/bbolt"
 	"github.com/gorilla/mux"
 )
 
-func GetRouter(db *sql.DB) *mux.Router {
+func GetRouter(db *bolt.DB) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/locations", mkAddLocation(db)).Methods("POST")
 	router.HandleFunc("/locations", mkGetLocations(db)).Methods("GET")
@@ -25,7 +25,7 @@ func GetRouter(db *sql.DB) *mux.Router {
 	return router
 }
 
-func mkAddLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkAddLocation(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var location Location
 		// protect against giant blobs being sent
@@ -52,7 +52,7 @@ func mkAddLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkUpdateLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkUpdateLocation(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
@@ -81,7 +81,7 @@ func mkUpdateLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkDeleteLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkDeleteLocation(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
@@ -91,7 +91,7 @@ func mkDeleteLocation(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkGetLocations(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkGetLocations(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locations := GetLocations(db)
 
@@ -99,7 +99,7 @@ func mkGetLocations(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkUpdateItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkUpdateItem(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var item Item
 		vars := mux.Vars(r)
@@ -129,7 +129,7 @@ func mkUpdateItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkAddItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkAddItem(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var item Item
 		// protect against giant blobs being sent
@@ -156,7 +156,7 @@ func mkAddItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkDeleteItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkDeleteItem(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
@@ -166,7 +166,7 @@ func mkDeleteItem(db *sql.DB) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func mkGetItems(db *sql.DB) func(http.ResponseWriter, *http.Request) {
+func mkGetItems(db *bolt.DB) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		items := GetItems(db)
 

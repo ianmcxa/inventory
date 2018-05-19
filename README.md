@@ -8,7 +8,7 @@ First pull in the dependencies
 
 `go get -u github.com/UnnoTed/fileb0x`
 
-`go get -u github.com/mattn/go-sqlite3`
+`go get github.com/coreos/bbolt/...`
 
 Run the build script
 
