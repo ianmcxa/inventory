@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="https://unpkg.com/buefy/lib/buefy.min.css">
 	<script src="https://unpkg.com/vue/dist/vue.min.js"></script>
 	<script src="https://unpkg.com/buefy"></script>
@@ -102,7 +104,7 @@
 					</div>
 				</div>
 				
-				<div class="field is-grouped" style="margin-top:1rem">
+				<div class="field is-grouped" style="margin-top:1rem;margin-bottom:1rem">
 					<p class="control">
 						<button v-on:click="showAddLocation = true" class="button is-primary">
 							<span class="icon">
@@ -198,7 +200,7 @@
 				</div>
 
 				
-				<div class="field is-grouped" style="margin-top:1rem">
+				<div class="field is-grouped" style="margin-top:1rem;margin-bottom:1rem">
 					<p class="control">
 						<button v-on:click="showAddItem = true" class="button is-primary">
 							<span class="icon">
@@ -274,7 +276,7 @@
 				},
 			},
 			data: {
-				page: 'locations',
+				page: 'items',
 				locations: [],
 				items: [],
 				selectedItem: null,
@@ -307,6 +309,8 @@
 						response => { 
 							this.locations.push(newLocation)
 							this.showAddLocation = false
+							this.addLocationName = ''
+							this.addLocationParent = ''
 						}, response => { console.log(response) }
 					)
 				},
@@ -340,6 +344,8 @@
 						response => { 
 							this.items.push(newItem)
 							this.showAddItem = false
+							this.addItemName = ''
+							this.addItemLocation = ''
 						},
 						response => { console.log(response) }
 					)
